@@ -41,10 +41,6 @@ Based off the [bubbletea](https://github.com/charmbracelet/bubbletea) library.
 [^p4]: Pending https://github.com/charmbracelet/bubbletea/pull/397 and https://github.com/charmbracelet/bubbletea/pull/397
 [^ed]: Possible to configure via key binding macro.
 
-## Demo / explanation
-
-[![Bubbline intro on YouTube](https://img.youtube.com/vi/IsxNEWviSpU/0.jpg)](https://www.youtube.com/watch?v=IsxNEWviSpU)
-
 ## Customizable key bindings
 
 | Default keys                 | Description                                                                                  | Binding name               |
