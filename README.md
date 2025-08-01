@@ -1,9 +1,8 @@
 # Bubbline
 
-[![GoDoc](https://godoc.org/github.com/golang/gddo?status.svg)](https://pkg.go.dev/github.com/knz/bubbline)
-[![Build Status](https://github.com/knz/bubbline/workflows/build/badge.svg)](https://github.com/knz/bubbline/actions)
-[![Go ReportCard](https://goreportcard.com/badge/knz/bubbline)](https://goreportcard.com/report/knz/bubbline)
-[![Coverage Status](https://coveralls.io/repos/github/knz/bubbline/badge.svg)](https://coveralls.io/github/knz/bubbline)
+Fork of the [bubbline package](https://github.com/knz/bubbline) from cockroachdb. To fix build issues
+and add highlighting.
+
 
 An input line editor for line-oriented terminal applications.
 
