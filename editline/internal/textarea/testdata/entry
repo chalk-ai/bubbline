@@ -1,0 +1,90 @@
+# By default, the textarea is blurred and
+# does not react to key bindings.
+run
+enter hello world!
+----
+-- view:
+┃  1                                    ␤
+┃  ~                                    ␤
+┃  ~                                    ␤
+┃  ~                                    ␤
+┃  ~                                    ␤
+┃  ~                                    🛇
+
+# Initially, its value is the empty string.
+# The other properties are set to defaults.
+run observe=(value,props,pos)
+----
+-- value:
+""
+-- props:
+Focused: false
+Width: 35, Height: 6, LogicalHeight: 1
+Length: 0, LineCount: 1, NumLinesInValue: 1, EmptyValue: true
+-- pos:
+Line: 0, Pos 0, (row 0, col 0, lastCharOffset 0)
+LineInfo: {Width:1 CharWidth:1 Height:1 StartColumn:0 ColumnOffset:0 RowOffset:0 CharOffset:0}
+AtBeginningOfEmptyLine: true, AtFirstLineOfInputAndView: true, AtLastLineOfInputAndView: true
+
+# Once focused, it works. The cursor is also displayed.
+run observe=(view,value,runes,props,pos)
+focus
+enter hello world!
+----
+-- view:
+┃  1 hello world!                       ␤
+┃  2 [7m [0m                                  ␤
+┃  ~                                    ␤
+┃  ~                                    ␤
+┃  ~                                    ␤
+┃  ~                                    🛇
+-- value:
+"hello world!\n"
+-- runes:
+[[104 101 108 108 111 32 119 111 114 108 100 33] []]
+-- props:
+Focused: true
+Width: 35, Height: 6, LogicalHeight: 2
+Length: 13, LineCount: 2, NumLinesInValue: 2, EmptyValue: false
+-- pos:
+Line: 1, Pos 0, (row 1, col 0, lastCharOffset 0)
+LineInfo: {Width:1 CharWidth:1 Height:1 StartColumn:0 ColumnOffset:0 RowOffset:0 CharOffset:0}
+AtBeginningOfEmptyLine: true, AtFirstLineOfInputAndView: false, AtLastLineOfInputAndView: true
+
+# Once blurred, the contents are still displayed.
+# But the cursor is not.
+run observe=(view,value,props,pos)
+blur
+----
+-- view:
+┃  1 hello world!                       ␤
+┃  2                                    ␤
+┃  ~                                    ␤
+┃  ~                                    ␤
+┃  ~                                    ␤
+┃  ~                                    🛇
+-- value:
+"hello world!\n"
+-- props:
+Focused: false
+Width: 35, Height: 6, LogicalHeight: 2
+Length: 13, LineCount: 2, NumLinesInValue: 2, EmptyValue: false
+-- pos:
+Line: 1, Pos 0, (row 1, col 0, lastCharOffset 0)
+LineInfo: {Width:1 CharWidth:1 Height:1 StartColumn:0 ColumnOffset:0 RowOffset:0 CharOffset:0}
+AtBeginningOfEmptyLine: true, AtFirstLineOfInputAndView: false, AtLastLineOfInputAndView: true
+
+# Paste from clipboard has nothing to offer in unit tests.
+# But we include it here for coverage testing.
+run
+setvalue "hello"
+key alt+>
+key ctrl+v
+----
+-- view:
+┃  1 hello                              ␤
+┃  ~                                    ␤
+┃  ~                                    ␤
+┃  ~                                    ␤
+┃  ~                                    ␤
+┃  ~                                    🛇
