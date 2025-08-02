@@ -181,7 +181,6 @@ func convertToItems(values Values, catIdx int) (res []list.Item, maxWidth int) {
 	res = make([]list.Item, numE)
 	for i := 0; i < numE; i++ {
 		it := values.Entry(catIdx, i)
-		// TODO(knz): Support multi-line items.
 		maxWidth = max(maxWidth, rw.StringWidth(it.Title()))
 		res[i] = candidateItem{it}
 	}
@@ -217,8 +216,6 @@ func (r *renderer) Render(w io.Writer, m list.Model, index int, item list.Item) 
 
 // Height is part of the list.ItemDelegate interface.
 func (r *renderer) Height() int {
-	// TODO(knz): Support multi-line items, e.g. identifiers
-	// containing a newline character.
 	return 1
 }
 

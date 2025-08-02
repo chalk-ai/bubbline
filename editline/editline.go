@@ -11,14 +11,14 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/chalk-ai/bubbline/complete"
+	"github.com/chalk-ai/bubbline/editline/internal/textarea"
 	"github.com/charmbracelet/bubbles/cursor"
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/knz/bubbline/complete"
-	"github.com/knz/bubbline/editline/internal/textarea"
 	rw "github.com/mattn/go-runewidth"
 	"github.com/muesli/reflow/wordwrap"
 )
@@ -592,7 +592,6 @@ func (m *Model) historyDown() (cmd tea.Cmd) {
 func (m *Model) autoComplete() (cmd tea.Cmd) {
 	msgs, comps := m.AutoComplete(m.text.ValueRunes(), m.text.Line(), m.text.CursorPos())
 	if msgs != "" {
-		// TODO(knz): maybe display the help using a viewport widget?
 		cmd = tea.Batch(cmd, tea.Println(msgs))
 	}
 

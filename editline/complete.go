@@ -3,8 +3,8 @@ package editline
 import (
 	"sort"
 
-	"github.com/knz/bubbline/complete"
-	"github.com/knz/bubbline/computil"
+	"github.com/chalk-ai/bubbline/complete"
+	"github.com/chalk-ai/bubbline/computil"
 	rw "github.com/mattn/go-runewidth"
 )
 
@@ -139,7 +139,6 @@ func computePrefill(
 		return true, moveRight, deleteLeft, candidates[0], nil
 	}
 	sort.Strings(candidates)
-	// TODO(knz): Do we ever need case-insensitive prefix?
 	prefix := computil.FindLongestCommonPrefix(candidates[0], candidates[len(candidates)-1], false)
 	if len(prefix) == 0 {
 		return false, 0, 0, "", comp

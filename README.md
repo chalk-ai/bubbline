@@ -1,12 +1,11 @@
 # Bubbline
 
-Fork of the [bubbline package](https://github.com/knz/bubbline) from cockroachdb. To fix build issues
-and add highlighting.
-
+Fork of the [bubbline](https://github.com/knz/bubbline) package from cockroachdb: fixes 
+build issues with new go releases and adds highlighting.
 
 An input line editor for line-oriented terminal applications.
 
-Based off the [bubbletea](https://github.com/charmbracelet/bubbletea) library.
+Based off the bubbletea library.
 
 ## Features of the line editor
 
@@ -97,7 +96,7 @@ import (
     "log"
 
     tea "github.com/charmbracelet/bubbletea"
-    "github.com/knz/bubbline"
+    "github.com/chalk-ai/bubbline"
 )
 
 func main() {
