@@ -112,9 +112,9 @@ var DefaultKeyMap = KeyMap{
 		ShowFullHelp:         key.NewBinding(key.WithKeys("alt+?"), key.WithHelp("M-?", "toggle key help")),
 		CloseFullHelp:        key.NewBinding(key.WithKeys("alt+?"), key.WithHelp("M-?", "toggle key help")),
 	},
-	NextCompletions:  key.NewBinding(key.WithKeys("right", "alt+n"), key.WithHelp("→/M-n", "next column")),
-	PrevCompletions:  key.NewBinding(key.WithKeys("left", "alt+p"), key.WithHelp("←/M-p", "prev column")),
-	AcceptCompletion: key.NewBinding(key.WithKeys("enter", "tab", "ctrl+j"), key.WithHelp("C-j/enter/tab", "accept")),
+	NextCompletions:  key.NewBinding(key.WithKeys("right", "alt+n", "tab"), key.WithHelp("→/M-n", "next column")),
+	PrevCompletions:  key.NewBinding(key.WithKeys("left", "alt+p", "shift-tab"), key.WithHelp("←/M-p", "prev column")),
+	AcceptCompletion: key.NewBinding(key.WithKeys("enter", "ctrl+j"), key.WithHelp("C-j/enter/tab", "accept")),
 	Abort:            key.NewBinding(key.WithKeys("ctrl+c"), key.WithHelp("C-c", "close/cancel")),
 }
 
