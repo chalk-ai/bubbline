@@ -1,0 +1,59 @@
+run
+reset
+resize 80 25
+----
+TEA WINDOW SIZE: {80 25}
+-- view:
+> [7m [0m                                                                           ␤
+M-? toggle key help • C-d erase/stop • C-c clear/cancel • M-. hide/show prompt🛇
+
+
+run observe=(view,value)
+type hello world!
+----
+-- view:
+> hello world![7m [0m                                                               ␤
+M-? toggle key help • C-d erase/stop • C-c clear/cancel • M-. hide/show prompt🛇
+-- value:
+"hello world!"
+
+# By default, the enter key completes the input.
+run observe=(view,value)
+enter
+noop
+----
+TEA QUIT
+-- view:
+> hello world!                                                                ␤
+M-? toggle key help • C-d erase/stop • C-c clear/cancel • M-. hide/show prompt🛇
+-- value:
+"hello world!"
+
+# Ctrl+O forces a newline character.
+run
+reset
+type hello
+key ctrl+o
+type world
+----
+-- view:
+> hello                                                                        ␤
+  world[7m [0m                                                                       ␤
+M-? toggle key help • C-d erase/stop • C-c clear/cancel • M-. hide/show prompt🛇
+
+
+# If there's empty newlines at the end, they are included in
+# the final value.
+run observe=(view,value)
+reset
+type hello world
+key ctrl+o
+key ctrl+o
+----
+-- view:
+> hello world                                                                  ␤
+                                                                               ␤
+  [7m [0m                                                                            ␤
+M-? toggle key help • C-d erase/stop • C-c clear/cancel • M-. hide/show prompt🛇
+-- value:
+"hello world\n\n"
