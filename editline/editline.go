@@ -930,6 +930,10 @@ func (m *Model) Update(imsg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, m.KeyMap.AutoComplete):
+			if m.showCompletions {
+				// If completions are showing, Tab should navigate completions, not trigger autocomplete
+				break
+			}
 			if m.AutoComplete == nil {
 				// Pass-through to the editor.
 				break

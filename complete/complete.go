@@ -113,7 +113,7 @@ var DefaultKeyMap = KeyMap{
 		CloseFullHelp:        key.NewBinding(key.WithKeys("alt+?"), key.WithHelp("M-?", "toggle key help")),
 	},
 	NextCompletions:  key.NewBinding(key.WithKeys("right", "alt+n", "tab"), key.WithHelp("→/M-n", "next column")),
-	PrevCompletions:  key.NewBinding(key.WithKeys("left", "alt+p", "shift-tab"), key.WithHelp("←/M-p", "prev column")),
+	PrevCompletions:  key.NewBinding(key.WithKeys("left", "alt+p", "shift+tab"), key.WithHelp("←/M-p", "prev column")),
 	AcceptCompletion: key.NewBinding(key.WithKeys("enter", "ctrl+j"), key.WithHelp("C-j/enter/tab", "accept")),
 	Abort:            key.NewBinding(key.WithKeys("ctrl+c"), key.WithHelp("C-c", "close/cancel")),
 }
@@ -314,6 +314,12 @@ func (m *Model) MatchesKey(msg tea.KeyMsg) bool {
 	if !m.focused || len(m.valueLists) == 0 {
 		return false
 	}
+	
+	// Explicitly check for Tab and Shift+Tab first
+	if msg.String() == "tab" || msg.String() == "shift+tab" {
+		return true
+	}
+	
 	curList := m.valueLists[m.selectedList]
 	switch {
 	case key.Matches(msg,
