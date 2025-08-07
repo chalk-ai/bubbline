@@ -62,7 +62,7 @@ type Candidate interface {
 // The start/end positions refer to the word start and end
 // positions on the current line.
 func SingleWordCompletion(word string, cursor, start, end int) Completions {
-	return &wordsCompletion{[]string{word}, "completion", cursor, start, end}
+	return &wordsCompletion{[]string{word}, nil, "completion", cursor, start, end}
 }
 
 // SimpleWordsCompletion turns an array of simple strings into a
@@ -73,11 +73,23 @@ func SimpleWordsCompletion(words []string, category string, cursor, start, end i
 	if len(words) == 0 {
 		return nil
 	}
-	return &wordsCompletion{words, category, cursor, start, end}
+	return &wordsCompletion{words, nil, category, cursor, start, end}
+}
+
+// SimpleWordsCompletionWithDescriptions turns arrays of strings and descriptions into a
+// Completions interface suitable to return from an AutoCompleteFn.
+// The start/end positions refer to the word start and end positions
+// on the current line. Each word can have an optional description.
+func SimpleWordsCompletionWithDescriptions(words []string, descriptions []string, category string, cursor, start, end int) Completions {
+	if len(words) == 0 {
+		return nil
+	}
+	return &wordsCompletion{words, descriptions, category, cursor, start, end}
 }
 
 type wordsCompletion struct {
 	words              []string
+	descriptions       []string
 	category           string
 	cursor, start, end int
 }
@@ -94,7 +106,12 @@ type wordsEntry struct {
 }
 
 func (s wordsEntry) Title() string       { return s.s.words[s.i] }
-func (s wordsEntry) Description() string { return "" }
+func (s wordsEntry) Description() string {
+	if s.s.descriptions != nil && s.i < len(s.s.descriptions) {
+		return s.s.descriptions[s.i]
+	}
+	return ""
+}
 func (s wordsEntry) Replacement() string { return s.Title() }
 func (s wordsEntry) MoveRight() int      { return s.s.end - s.s.cursor }
 func (s wordsEntry) DeleteLeft() int     { return s.s.end - s.s.start }

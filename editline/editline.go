@@ -60,6 +60,7 @@ type KeyMap struct {
 	SignalQuit      key.Binding
 	SignalTTYStop   key.Binding
 	Refresh         key.Binding
+	Clear           key.Binding
 	AbortSearch     key.Binding
 	SearchBackward  key.Binding
 	HistoryPrevious key.Binding
@@ -85,6 +86,7 @@ var DefaultKeyMap = KeyMap{
 	SignalQuit:      key.NewBinding(key.WithKeys(`ctrl+\`)),
 	SignalTTYStop:   key.NewBinding(key.WithKeys("ctrl+z")),
 	Refresh:         key.NewBinding(key.WithKeys("ctrl+l"), key.WithHelp("C-l", "refresh display")),
+	Clear:           key.NewBinding(key.WithKeys("ctrl+k"), key.WithHelp("C-k", "clear screen")),
 	EndOfInput:      key.NewBinding(key.WithKeys("ctrl+d"), key.WithHelp("C-d", "erase/stop")),
 	AbortSearch:     key.NewBinding(key.WithKeys("ctrl+g"), key.WithDisabled()),
 	SearchBackward:  key.NewBinding(key.WithKeys("ctrl+r"), key.WithHelp("C-r", "search hist"), key.WithDisabled()),
@@ -878,6 +880,9 @@ func (m *Model) Update(imsg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 		case key.Matches(msg, m.KeyMap.Refresh):
+			return m, tea.Batch(cmd, tea.ClearScreen)
+
+		case key.Matches(msg, m.KeyMap.Clear):
 			return m, tea.Batch(cmd, tea.ClearScreen)
 
 		case key.Matches(msg, m.KeyMap.MoreHelp):
