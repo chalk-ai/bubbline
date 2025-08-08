@@ -79,7 +79,7 @@ type KeyMap struct {
 var DefaultKeyMap = KeyMap{
 	KeyMap: textarea.DefaultKeyMap,
 
-	AlwaysNewline:   key.NewBinding(key.WithKeys("ctrl+o"), key.WithHelp("C-o", "force newline")),
+	AlwaysNewline:   key.NewBinding(key.WithKeys("ctrl+0"), key.WithHelp("C-0", "force newline")),
 	AlwaysComplete:  key.NewBinding(key.WithKeys("alt+enter", "alt+\r"), key.WithHelp("M-⤶/M-C-m", "force complete")),
 	AutoComplete:    key.NewBinding(key.WithKeys("tab"), key.WithHelp("tab", "try autocomplete")),
 	Interrupt:       key.NewBinding(key.WithKeys("ctrl+c"), key.WithHelp("C-c", "clear/cancel")),
@@ -92,12 +92,11 @@ var DefaultKeyMap = KeyMap{
 	SearchBackward:  key.NewBinding(key.WithKeys("ctrl+r"), key.WithHelp("C-r", "search hist"), key.WithDisabled()),
 	HistoryPrevious: key.NewBinding(key.WithKeys("alt+p"), key.WithHelp("M-p", "prev history entry"), key.WithDisabled()),
 	HistoryNext:     key.NewBinding(key.WithKeys("alt+n"), key.WithHelp("M-n", "next history entry"), key.WithDisabled()),
-	HideShowPrompt:  key.NewBinding(key.WithKeys("alt+."), key.WithHelp("M-.", "hide/show prompt")),
-	MoreHelp:        key.NewBinding(key.WithKeys("alt+?"), key.WithHelp("M-?", "toggle key help")),
+	MoreHelp:        key.NewBinding(key.WithKeys("ctrl+h"), key.WithHelp("C-h", "toggle key help")),
 	ReflowLine:      key.NewBinding(key.WithKeys("alt+q"), key.WithHelp("M-q", "reflow line")),
 	ReflowAll:       key.NewBinding(key.WithKeys("alt+Q", "alt+`"), key.WithHelp("M-S-q/M-`", "reflow all")),
 	Debug:           key.NewBinding(key.WithKeys("ctrl+_", "ctrl+@"), key.WithHelp("C-_/C-@", "debug mode"), key.WithDisabled()),
-	ExternalEdit:    key.NewBinding(key.WithKeys("alt+f2", "alt+2"), key.WithHelp("M-2/M-F2", "external edit")),
+	ExternalEdit:    key.NewBinding(key.WithKeys("ctrl+o"), key.WithHelp("C-.", "external edit")),
 }
 
 // Model represents a widget that supports multi-line entry with
