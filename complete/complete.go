@@ -65,12 +65,17 @@ var DefaultStyles = func() (c Styles) {
 	ls := list.DefaultStyles()
 	subtle := lipgloss.AdaptiveColor{Light: "#D9DCCF", Dark: "#383838"}
 
+	// Chalk-inspired colors
+	chalkGreen := lipgloss.AdaptiveColor{Light: "#00A651", Dark: "#2aa853"}
+	chalkPurple := lipgloss.AdaptiveColor{Light: "#FFCC00", Dark: "#d4b4ff"}
+	chalkGray := lipgloss.AdaptiveColor{Light: "#666666", Dark: "#e2e1ed"}
+
 	c.Item = lipgloss.NewStyle().PaddingLeft(1)
-	c.SelectedItem = lipgloss.NewStyle().PaddingLeft(1).Foreground(lipgloss.Color("170"))
+	c.SelectedItem = lipgloss.NewStyle().PaddingLeft(1).Foreground(chalkGreen).Bold(true)
 
 	c.FocusedTitleBar = lipgloss.NewStyle()
 	c.BlurredTitleBar = lipgloss.NewStyle()
-	c.FocusedTitle = lipgloss.NewStyle().Background(lipgloss.Color("62")).Foreground(lipgloss.Color("230"))
+	c.FocusedTitle = lipgloss.NewStyle().Background(chalkGreen).Foreground(lipgloss.Color("#FFFFFF")).Bold(true)
 	c.BlurredTitle = c.FocusedTitle.Copy().Foreground(subtle)
 	c.Spinner = ls.Spinner
 	c.FilterPrompt = ls.FilterPrompt
@@ -81,8 +86,8 @@ var DefaultStyles = func() (c Styles) {
 	c.InactivePaginationDot = ls.InactivePaginationDot
 	c.ArabicPagination = ls.ArabicPagination
 	c.DividerDot = ls.DividerDot
-	c.Description = lipgloss.NewStyle().Bold(true)
-	c.PlaceholderDescription = lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
+	c.Description = lipgloss.NewStyle().Bold(true).Foreground(chalkPurple)
+	c.PlaceholderDescription = lipgloss.NewStyle().Foreground(chalkGray)
 
 	return c
 }()
