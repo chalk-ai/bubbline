@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 
 	"github.com/atotto/clipboard"
 	"github.com/charmbracelet/bubbles/cursor"
@@ -714,7 +715,11 @@ func (m *Model) characterRight() {
 // If insideLine is set, the cursor is moved to the last
 // character in the previous line, instead of one past that.
 func (m *Model) characterLeft(insideLine bool) {
-	if m.col == 0 && m.row != 0 {
+	if m.col == 0 {
+		// Don't allow moving left past the start of the first line
+		if m.row == 0 {
+			return
+		}
 		m.row--
 		m.CursorEnd()
 		if !insideLine {
@@ -1174,12 +1179,66 @@ func (m Model) View() string {
 						m.Cursor.SetChar(" ")
 						lineText := highlightedLines[l] + m.Cursor.View()
 						s.WriteString(style.Render(lineText))
-					} else {
-						// Insert cursor into highlighted text at the correct position
-						m.Cursor.SetChar(string(wrappedLine[lineInfo.ColumnOffset]))
-						cursorText := m.Cursor.View()
-						lineText := insertCursorInHighlightedText(highlightedLines[l], lineInfo.ColumnOffset, cursorText)
+					} else if m.col >= len(line) {
+						// Cursor at end of line - append cursor
+						m.Cursor.SetChar(" ")
+						lineText := highlightedLines[l] + m.Cursor.View()
 						s.WriteString(style.Render(lineText))
+					} else {
+						// Cursor in middle - highlight everything first, then insert cursor
+						plainText := stripAnsiEscapes(highlightedLines[l])
+						plainRunes := []rune(plainText)
+
+						if lineInfo.ColumnOffset < len(plainRunes) {
+							cursorChar := plainRunes[lineInfo.ColumnOffset]
+
+							// Highlight the complete line
+							highlighted := highlightedLines[l]
+
+							// Find the position in the highlighted text where the cursor should go
+							cursorPos := findCharPositionInHighlightedText(highlighted, lineInfo.ColumnOffset)
+
+							// We need to split the highlighted text and insert cursor
+							// But we need to preserve any ANSI codes around that position
+							if cursorPos >= 0 && cursorPos < len(highlighted) {
+								// Find the actual character position (skip ANSI codes)
+								before := highlighted[:cursorPos]
+								after := highlighted[cursorPos:]
+
+								// Skip the character we're replacing in the after part
+								// Account for potential ANSI codes immediately after cursor position
+								afterStart := 0
+								if len(after) > 0 {
+									// Skip the character at cursor position
+									r, size := utf8.DecodeRuneInString(after)
+									if r != utf8.RuneError {
+										afterStart = size
+									} else {
+										afterStart = 1
+									}
+								}
+
+								m.Cursor.SetChar(string(cursorChar))
+
+								// Get active formatting at cursor position and restore it after cursor
+								activeFormat := getActiveAnsiFormatting(highlighted, cursorPos)
+
+								// The cursor view likely ends with a reset, so we need to restore formatting
+								result := before + m.Cursor.View() + activeFormat + after[afterStart:]
+								s.WriteString(style.Render(result))
+							} else {
+								// Fallback to plain text
+								s.WriteString(style.Render(string(plainRunes[:lineInfo.ColumnOffset])))
+								m.Cursor.SetChar(string(plainRunes[lineInfo.ColumnOffset]))
+								s.WriteString(m.Cursor.View())
+								s.WriteString(style.Render(string(plainRunes[lineInfo.ColumnOffset+1:])))
+							}
+						} else {
+							// Cursor at end
+							s.WriteString(style.Render(highlightedLines[l]))
+							m.Cursor.SetChar(" ")
+							s.WriteString(m.Cursor.View())
+						}
 					}
 				} else {
 					// Original cursor handling for non-highlighted text
@@ -1443,33 +1502,84 @@ func repeatSpaces(n int) []rune {
 func insertCursorInHighlightedText(highlightedText string, cursorPos int, cursor string) string {
 	plainText := stripAnsiEscapes(highlightedText)
 	plainRunes := []rune(plainText)
-	
-	if cursorPos <= 0 {
-		// At beginning, replace first character if it exists
-		if len(plainRunes) > 0 {
-			pos := findPositionInHighlightedText(highlightedText, 0)
-			endPos := findPositionInHighlightedText(highlightedText, 1)
-			if endPos > pos {
-				return highlightedText[:pos] + cursor + highlightedText[endPos:]
+
+	if cursorPos < 0 {
+		cursorPos = 0
+	}
+	if cursorPos >= len(plainRunes) {
+		// Cursor at end - just append cursor
+		return highlightedText + cursor
+	}
+
+	// Build result character by character, preserving ANSI sequences
+	var result strings.Builder
+	var plainIndex int
+	inEscape := false
+	i := 0
+
+	for i < len(highlightedText) {
+		char := highlightedText[i]
+
+		if char == '\x1b' {
+			// Start of ANSI escape sequence
+			inEscape = true
+			result.WriteByte(char)
+		} else if inEscape {
+			// Inside ANSI escape sequence
+			result.WriteByte(char)
+			if char == 'm' {
+				inEscape = false
+			}
+		} else {
+			// Regular character
+			if plainIndex == cursorPos {
+				// Insert cursor here and skip the original character
+				result.WriteString(cursor)
+				// Skip to next character (handle UTF-8)
+				if char < 0x80 {
+					// ASCII
+				} else if (char & 0xE0) == 0xC0 {
+					// 2-byte UTF-8
+					i++
+				} else if (char & 0xF0) == 0xE0 {
+					// 3-byte UTF-8
+					i += 2
+				} else if (char & 0xF8) == 0xF0 {
+					// 4-byte UTF-8
+					i += 3
+				}
+				plainIndex++
+			} else {
+				// Copy character as-is
+				result.WriteByte(char)
+				// Count character position (handle UTF-8)
+				if char < 0x80 {
+					plainIndex++
+				} else if (char & 0xE0) == 0xC0 {
+					plainIndex++
+					i++
+					if i < len(highlightedText) {
+						result.WriteByte(highlightedText[i])
+					}
+				} else if (char & 0xF0) == 0xE0 {
+					plainIndex++
+					for j := 0; j < 2 && i+1 < len(highlightedText); j++ {
+						i++
+						result.WriteByte(highlightedText[i])
+					}
+				} else if (char & 0xF8) == 0xF0 {
+					plainIndex++
+					for j := 0; j < 3 && i+1 < len(highlightedText); j++ {
+						i++
+						result.WriteByte(highlightedText[i])
+					}
+				}
 			}
 		}
-		return cursor + highlightedText
+		i++
 	}
-	
-	if cursorPos >= len(plainRunes) {
-		return highlightedText + cursor
-	}
-	
-	// Find the start and end positions of the character to replace
-	startPos := findPositionInHighlightedText(highlightedText, cursorPos)
-	endPos := findPositionInHighlightedText(highlightedText, cursorPos+1)
-	
-	if startPos < 0 || startPos >= len(highlightedText) {
-		return highlightedText + cursor
-	}
-	
-	// Replace the character at cursorPos with the cursor
-	return highlightedText[:startPos] + cursor + highlightedText[endPos:]
+
+	return result.String()
 }
 
 // stripAnsiEscapes removes ANSI escape sequences from text
@@ -1478,6 +1588,29 @@ func stripAnsiEscapes(text string) string {
 	ansiRegex := `\x1b\[[0-9;]*m`
 	re := regexp.MustCompile(ansiRegex)
 	return re.ReplaceAllString(text, "")
+}
+
+// findCharPositionInHighlightedText finds the byte position of a character in highlighted text
+func findCharPositionInHighlightedText(highlightedText string, charIndex int) int {
+	plainCharCount := 0
+	inEscape := false
+
+	for i := 0; i < len(highlightedText); i++ {
+		char := highlightedText[i]
+
+		if char == '\x1b' {
+			inEscape = true
+		} else if inEscape && char == 'm' {
+			inEscape = false
+		} else if !inEscape {
+			if plainCharCount == charIndex {
+				return i
+			}
+			plainCharCount++
+		}
+	}
+
+	return len(highlightedText)
 }
 
 // findPositionInHighlightedText finds the byte position in highlighted text for a given character position
@@ -1526,6 +1659,57 @@ func findPositionInHighlightedText(highlightedText string, charPos int) int {
 	}
 	
 	return len(highlightedText)
+}
+
+// getActiveAnsiFormatting extracts the active ANSI formatting codes at a given position
+// by tracking the last active state for each type of formatting
+func getActiveAnsiFormatting(text string, pos int) string {
+	if pos <= 0 {
+		return ""
+	}
+
+	// Track different types of formatting separately
+	var fgColor, bgColor, style string
+	inEscape := false
+	escapeStart := -1
+
+	for i := 0; i < pos && i < len(text); i++ {
+		if text[i] == '\x1b' {
+			inEscape = true
+			escapeStart = i
+		} else if inEscape && text[i] == 'm' {
+			inEscape = false
+			// Extract the escape sequence
+			code := text[escapeStart : i+1]
+
+			// Parse the code to determine what it affects
+			if code == "\x1b[0m" || code == "\x1b[m" {
+				// Reset all formatting
+				fgColor = ""
+				bgColor = ""
+				style = ""
+			} else if strings.Contains(code, "[3") || strings.Contains(code, "[9") {
+				// Foreground color (30-37, 90-97, or 38;...)
+				fgColor = code
+			} else if strings.Contains(code, "[4") && !strings.Contains(code, "[48") {
+				// Background color (40-47, 100-107, or 48;...)
+				// But not style codes like [4m for underline
+				if len(code) > 4 {
+					bgColor = code
+				}
+			} else if strings.Contains(code, "[48") {
+				// 48;... background color
+				bgColor = code
+			} else {
+				// Style codes (bold, italic, underline, etc.)
+				style = code
+			}
+		}
+	}
+
+	// Reconstruct the active formatting
+	result := fgColor + bgColor + style
+	return result
 }
 
 func clamp(v, low, high int) int {
