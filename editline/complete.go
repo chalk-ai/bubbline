@@ -160,6 +160,13 @@ func computePrefill(
 	if len(prefix) == 0 {
 		return false, 0, 0, "", comp
 	}
+	// Don't do prefill if any candidate is exactly equal to the prefix,
+	// as this would cause that completion to be elided from the display.
+	for _, candidate := range candidates {
+		if candidate == prefix {
+			return false, 0, 0, "", comp
+		}
+	}
 	return true, moveRight, deleteLeft, prefix, shiftComp{
 		Completions: comp,
 		shift:       rw.StringWidth(prefix),

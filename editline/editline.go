@@ -138,6 +138,10 @@ type Model struct {
 	// AutoComplete is the AutoCompleteFn to use.
 	AutoComplete AutoCompleteFn
 
+	// AddSpaceAfterCompletion, if true, adds a trailing space after
+	// accepting a completion. Default is true for backward compatibility.
+	AddSpaceAfterCompletion bool
+
 	// CharLimit is the maximum size of the input in characters.
 	// Set to zero or less for no limit.
 	CharLimit int
@@ -244,24 +248,25 @@ type Model struct {
 func New(width, height int) *Model {
 	focusedStyle, blurredStyle := DefaultStyles()
 	m := &Model{
-		text:                 textarea.New(),
-		Err:                  nil,
-		KeyMap:               DefaultKeyMap,
-		MaxHistorySize:       0, // no limit
-		Reflow:               DefaultReflow,
-		DedupHistory:         true,
-		DeleteCharIfNotEOF:   true,
-		FocusedStyle:         focusedStyle,
-		BlurredStyle:         blurredStyle,
-		Placeholder:          "",
-		Prompt:               "> ",
-		NextPrompt:           "",
-		SearchPrompt:         "bck:",
-		SearchPromptNotFound: "bck?",
-		SearchPromptInvalid:  "bck!",
-		ShowLineNumbers:      false,
-		help:                 help.New(),
-		completions:          complete.New(),
+		text:                    textarea.New(),
+		Err:                     nil,
+		KeyMap:                  DefaultKeyMap,
+		MaxHistorySize:          0, // no limit
+		Reflow:                  DefaultReflow,
+		DedupHistory:            true,
+		DeleteCharIfNotEOF:      true,
+		AddSpaceAfterCompletion: true, // default to true for backward compatibility
+		FocusedStyle:            focusedStyle,
+		BlurredStyle:            blurredStyle,
+		Placeholder:             "",
+		Prompt:                  "> ",
+		NextPrompt:              "",
+		SearchPrompt:            "bck:",
+		SearchPromptNotFound:    "bck?",
+		SearchPromptInvalid:     "bck!",
+		ShowLineNumbers:         false,
+		help:                    help.New(),
+		completions:             complete.New(),
 	}
 	if width != 0 || height != 0 {
 		m.hasNewSize = true
@@ -800,7 +805,9 @@ func (m *Model) handleCompletions(imsg tea.Msg) (tea.Model, tea.Cmd) {
 		m.text.CursorRight(c.MoveRight())
 		m.text.DeleteCharactersBackward(c.DeleteLeft())
 		m.text.InsertString(c.Replacement())
-		m.text.InsertRune(' ')
+		if m.AddSpaceAfterCompletion {
+			m.text.InsertRune(' ')
+		}
 	}
 	m.showCompletions = false
 	m.completions.Blur()
@@ -1105,7 +1112,6 @@ func (m Model) View() string {
 
 	if m.showCompletions {
 		buf.WriteString(m.completions.View())
-		buf.WriteByte('\n')
 	}
 	buf.WriteString(m.text.View())
 	if m.currentlySearching() {

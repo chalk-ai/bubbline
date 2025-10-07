@@ -75,7 +75,7 @@ var DefaultStyles = func() (c Styles) {
 
 	c.FocusedTitleBar = lipgloss.NewStyle()
 	c.BlurredTitleBar = lipgloss.NewStyle()
-	c.FocusedTitle = lipgloss.NewStyle().Foreground(chalkGreenLight).Underline(true).PaddingBottom(1)
+	c.FocusedTitle = lipgloss.NewStyle().Foreground(chalkGreenLight).Underline(true)
 	c.BlurredTitle = c.FocusedTitle.Copy().Foreground(subtle)
 	c.Spinner = ls.Spinner
 	c.FilterPrompt = ls.FilterPrompt
@@ -85,7 +85,7 @@ var DefaultStyles = func() (c Styles) {
 	c.ActivePaginationDot = ls.ActivePaginationDot
 	c.InactivePaginationDot = ls.InactivePaginationDot
 	c.ArabicPagination = ls.ArabicPagination
-	c.DividerDot = ls.DividerDot
+	c.DividerDot = lipgloss.NewStyle()
 	c.Description = lipgloss.NewStyle().Foreground(chalkGray).PaddingLeft(2)
 	c.PlaceholderDescription = lipgloss.NewStyle().Foreground(chalkGray)
 
@@ -144,9 +144,10 @@ type Model struct {
 
 	values Values
 
-	selectedList int
-	listItems    [][]list.Item
-	valueLists   []*list.Model
+	selectedList  int
+	listItems     [][]list.Item
+	valueLists    []*list.Model
+	categoryNames []string
 }
 
 func (m *Model) Debug() string {
@@ -241,9 +242,11 @@ func (m *Model) SetHeight(height int) {
 	m.height = clamp(height, 2, m.maxHeight)
 	for _, l := range m.valueLists {
 		l.SetHeight(m.height - 1)
+		// Ensure paginator shows 4 items per page
+		l.Paginator.PerPage = 4
 		// Force recomputing the keybindings, which
 		// is dependent on the page size.
-		l.SetFilteringEnabled(true)
+		l.SetFilteringEnabled(false)
 	}
 }
 
@@ -265,6 +268,7 @@ func (m *Model) SetValues(values Values) {
 	numCats := values.NumCategories()
 	m.valueLists = make([]*list.Model, numCats)
 	m.listItems = make([][]list.Item, numCats)
+	m.categoryNames = make([]string, numCats)
 	const stdHeight = 10
 	listDecorationRows :=
 		1 +
@@ -276,8 +280,7 @@ func (m *Model) SetValues(values Values) {
 				m.Styles.BlurredTitleBar.GetVerticalMargins()) +
 			1 +
 			m.Styles.PaginationStyle.GetVerticalPadding() +
-			// (facepalm) the list widget forces a vertical margin of 1...
-			max(1, m.Styles.PaginationStyle.GetVerticalMargins())
+			m.Styles.PaginationStyle.GetVerticalMargins()
 	m.maxHeight = listDecorationRows
 
 	perItemHeight := 1 + max(
@@ -286,19 +289,21 @@ func (m *Model) SetValues(values Values) {
 
 	for i := 0; i < numCats; i++ {
 		category := values.CategoryTitle(i)
-		var maxWidth int
-		m.listItems[i], maxWidth = convertToItems(values, i)
-		// Limit to 5 items per page
-		itemsToShow := min(len(m.listItems[i]), 5)
+		m.categoryNames[i] = category
+		var itemsMaxWidth int
+		m.listItems[i], itemsMaxWidth = convertToItems(values, i)
+		// Limit to 4 items per page
+		itemsToShow := min(len(m.listItems[i]), 4)
 		m.maxHeight = max(m.maxHeight, itemsToShow*perItemHeight+listDecorationRows)
-		maxWidth = max(maxWidth+1, rw.StringWidth(category))
-		r := &renderer{m: m, listIdx: i, width: maxWidth}
-		l := list.New(m.listItems[i], r, maxWidth, stdHeight)
-		l.Title = category
+		r := &renderer{m: m, listIdx: i, width: itemsMaxWidth}
+		l := list.New(m.listItems[i], r, itemsMaxWidth, stdHeight)
+		l.Title = "" // Don't use list's built-in title to avoid truncation
 		l.KeyMap = m.KeyMap.KeyMap
 		l.DisableQuitKeybindings()
 		l.SetShowHelp(false)
 		l.SetShowStatusBar(false)
+		// Set the paginator to show all items (up to 4) per page
+		l.Paginator.PerPage = 4
 		m.valueLists[i] = &l
 	}
 
@@ -451,7 +456,13 @@ func (m *Model) Update(imsg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *Model) View() string {
 	contents := make([]string, len(m.valueLists))
 	for i, l := range m.valueLists {
-		contents[i] = l.View()
+		// Render title manually to avoid truncation
+		titleStyle := m.Styles.BlurredTitle
+		if i == m.selectedList && m.focused {
+			titleStyle = m.Styles.FocusedTitle
+		}
+		title := titleStyle.Render(m.categoryNames[i])
+		contents[i] = title + l.View()
 	}
 	result := lipgloss.JoinHorizontal(lipgloss.Top, contents...)
 
@@ -484,7 +495,7 @@ func (m *Model) View() string {
 		Padding(0, 1).
 		Width(m.width)
 
-	return boxStyle.Render(combined) + "\n"
+	return boxStyle.Render(combined)
 }
 
 // ShortHelp is part of the help.KeyMap interface.
