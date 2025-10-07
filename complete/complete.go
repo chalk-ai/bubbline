@@ -67,7 +67,7 @@ var DefaultStyles = func() (c Styles) {
 
 	// Chalk-inspired colors
 	chalkGreen := lipgloss.AdaptiveColor{Light: "#00A651", Dark: "#2aa853"}
-	chalkPurple := lipgloss.AdaptiveColor{Light: "#FFCC00", Dark: "#d4b4ff"}
+	chalkGreenLight := lipgloss.AdaptiveColor{Light: "#9ad2a7", Dark: "#9ad2a7"} // Same as SQL keywords
 	chalkGray := lipgloss.AdaptiveColor{Light: "#666666", Dark: "#e2e1ed"}
 
 	c.Item = lipgloss.NewStyle().PaddingLeft(1)
@@ -75,7 +75,7 @@ var DefaultStyles = func() (c Styles) {
 
 	c.FocusedTitleBar = lipgloss.NewStyle()
 	c.BlurredTitleBar = lipgloss.NewStyle()
-	c.FocusedTitle = lipgloss.NewStyle().Background(chalkGreen).Foreground(lipgloss.Color("#FFFFFF")).Bold(true)
+	c.FocusedTitle = lipgloss.NewStyle().Foreground(chalkGreenLight).Underline(true).PaddingBottom(1)
 	c.BlurredTitle = c.FocusedTitle.Copy().Foreground(subtle)
 	c.Spinner = ls.Spinner
 	c.FilterPrompt = ls.FilterPrompt
@@ -86,7 +86,7 @@ var DefaultStyles = func() (c Styles) {
 	c.InactivePaginationDot = ls.InactivePaginationDot
 	c.ArabicPagination = ls.ArabicPagination
 	c.DividerDot = ls.DividerDot
-	c.Description = lipgloss.NewStyle().Bold(true).Foreground(chalkPurple)
+	c.Description = lipgloss.NewStyle().Foreground(chalkGray).PaddingLeft(2)
 	c.PlaceholderDescription = lipgloss.NewStyle().Foreground(chalkGray)
 
 	return c
@@ -120,7 +120,7 @@ var DefaultKeyMap = KeyMap{
 	NextCompletions:  key.NewBinding(key.WithKeys("right", "alt+n"), key.WithHelp("→/M-n", "next column")),
 	PrevCompletions:  key.NewBinding(key.WithKeys("left", "alt+p"), key.WithHelp("←/M-p", "prev column")),
 	AcceptCompletion: key.NewBinding(key.WithKeys("enter", "ctrl+j"), key.WithHelp("C-j/enter/tab", "accept")),
-	Abort:            key.NewBinding(key.WithKeys("ctrl+c"), key.WithHelp("C-c", "close/cancel")),
+	Abort:            key.NewBinding(key.WithKeys("ctrl+c", "esc"), key.WithHelp("C-c/esc", "close/cancel")),
 }
 
 // Model is the model that implements the completion
@@ -288,7 +288,9 @@ func (m *Model) SetValues(values Values) {
 		category := values.CategoryTitle(i)
 		var maxWidth int
 		m.listItems[i], maxWidth = convertToItems(values, i)
-		m.maxHeight = max(m.maxHeight, len(m.listItems[i])*perItemHeight+listDecorationRows)
+		// Limit to 5 items per page
+		itemsToShow := min(len(m.listItems[i]), 5)
+		m.maxHeight = max(m.maxHeight, itemsToShow*perItemHeight+listDecorationRows)
 		maxWidth = max(maxWidth+1, rw.StringWidth(category))
 		r := &renderer{m: m, listIdx: i, width: maxWidth}
 		l := list.New(m.listItems[i], r, maxWidth, stdHeight)
@@ -452,6 +454,7 @@ func (m *Model) View() string {
 		contents[i] = l.View()
 	}
 	result := lipgloss.JoinHorizontal(lipgloss.Top, contents...)
+
 	curSelected := m.valueLists[m.selectedList].SelectedItem()
 	var desc string
 	if curSelected == nil {
@@ -460,12 +463,28 @@ func (m *Model) View() string {
 		item := curSelected.(candidateItem)
 		desc = item.Description()
 		if desc != "" {
-			desc = m.Styles.Description.Render(truncate.String(item.Title()+": "+desc, uint(m.width)))
+			desc = m.Styles.Description.Render(truncate.String(desc, uint(m.width)))
 		} else {
-			desc = m.Styles.PlaceholderDescription.Render(fmt.Sprintf("(entry %q has no description)", item.Title()))
+			desc = m.Styles.PlaceholderDescription.Render("")
 		}
 	}
-	return result + "\n" + desc
+
+	// Add underline separator and spacing between completions and description
+	separator := lipgloss.NewStyle().
+		Foreground(lipgloss.AdaptiveColor{Light: "#D9DCCF", Dark: "#383838"}).
+		Render(strings.Repeat("─", m.width-4)) // -4 to account for border and padding
+
+	// Combine completions, separator, spacing, and description
+	combined := result + separator + "\n" + desc
+
+	// Add border around everything
+	boxStyle := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.AdaptiveColor{Light: "#D9DCCF", Dark: "#383838"}).
+		Padding(0, 1).
+		Width(m.width)
+
+	return boxStyle.Render(combined) + "\n"
 }
 
 // ShortHelp is part of the help.KeyMap interface.

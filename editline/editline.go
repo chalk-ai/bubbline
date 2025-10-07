@@ -898,10 +898,33 @@ func (m *Model) Update(imsg tea.Msg) (tea.Model, tea.Cmd) {
 
 			if m.showCompletions && !m.completions.MatchesKey(msg) {
 				// Currently displaying completions, but the widget
-				// is not accepting this keystroke. Cancel completions
-				// altogether and simply keep the input.
-				m.showCompletions = false
-				m.completions.Blur()
+				// is not accepting this keystroke.
+				// Keep completions open and update them dynamically
+
+				// Let the text input handle the keystroke first
+				var textCmd tea.Cmd
+				m.text, textCmd = m.text.Update(imsg)
+				cmd = tea.Batch(cmd, textCmd)
+
+				// Then re-trigger autocomplete to update the completions without closing
+				if m.AutoComplete != nil {
+					msgs, comps := m.AutoComplete(m.text.ValueRunes(), m.text.Line(), m.text.CursorPos())
+					if msgs != "" {
+						cmd = tea.Batch(cmd, tea.Println(msgs))
+					}
+
+					// If we still have completions, update them without closing
+					if comps != nil && comps.NumCategories() > 0 {
+						m.compCandidates = comps
+						m.completions.SetValues(comps)
+						// Keep focus and don't change showCompletions state
+					} else {
+						// Only close if there are no more matches
+						m.showCompletions = false
+						m.completions.Blur()
+					}
+				}
+				return m, cmd
 			}
 		}
 	}

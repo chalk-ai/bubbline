@@ -1134,6 +1134,12 @@ func (m Model) View() string {
 	for l, line := range highlightedValue {
 		wrappedLines := wrap(line, m.width)
 
+		// Wrap the highlighted version of this line to match the structure
+		var wrappedHighlightedLines []string
+		if m.Highlighter != nil && l < len(highlightedLines) {
+			wrappedHighlightedLines = wrapHighlightedText(highlightedLines[l], wrappedLines)
+		}
+
 		if m.row == l {
 			style = m.style.CursorLine
 		} else {
@@ -1173,27 +1179,28 @@ func (m Model) View() string {
 			}
 			if m.row == l && lineInfo.RowOffset == wl {
 				// Show cursor positioning for both highlighted and non-highlighted text
-				if m.Highlighter != nil && l < len(highlightedLines) && len(wrappedLines) == 1 {
+				if m.Highlighter != nil && wl < len(wrappedHighlightedLines) {
 					// Handle cursor in highlighted text
+					highlightedLine := wrappedHighlightedLines[wl]
 					if m.col >= len(line) && lineInfo.CharOffset >= m.width {
 						m.Cursor.SetChar(" ")
-						lineText := highlightedLines[l] + m.Cursor.View()
+						lineText := highlightedLine + m.Cursor.View()
 						s.WriteString(style.Render(lineText))
 					} else if m.col >= len(line) {
 						// Cursor at end of line - append cursor
 						m.Cursor.SetChar(" ")
-						lineText := highlightedLines[l] + m.Cursor.View()
+						lineText := highlightedLine + m.Cursor.View()
 						s.WriteString(style.Render(lineText))
 					} else {
 						// Cursor in middle - highlight everything first, then insert cursor
-						plainText := stripAnsiEscapes(highlightedLines[l])
+						plainText := stripAnsiEscapes(highlightedLine)
 						plainRunes := []rune(plainText)
 
 						if lineInfo.ColumnOffset < len(plainRunes) {
 							cursorChar := plainRunes[lineInfo.ColumnOffset]
 
 							// Highlight the complete line
-							highlighted := highlightedLines[l]
+							highlighted := highlightedLine
 
 							// Find the position in the highlighted text where the cursor should go
 							cursorPos := findCharPositionInHighlightedText(highlighted, lineInfo.ColumnOffset)
@@ -1235,7 +1242,7 @@ func (m Model) View() string {
 							}
 						} else {
 							// Cursor at end
-							s.WriteString(style.Render(highlightedLines[l]))
+							s.WriteString(style.Render(highlightedLine))
 							m.Cursor.SetChar(" ")
 							s.WriteString(m.Cursor.View())
 						}
@@ -1253,13 +1260,13 @@ func (m Model) View() string {
 					}
 				}
 			} else {
-				// Apply highlighting if available and line is not wrapped
+				// Apply highlighting if available
 				var lineText string
-				if m.Highlighter != nil && l < len(highlightedLines) && len(wrappedLines) == 1 {
-					// Use highlighted version for non-wrapped lines
-					lineText = highlightedLines[l]
+				if m.Highlighter != nil && wl < len(wrappedHighlightedLines) {
+					// Use highlighted version
+					lineText = wrappedHighlightedLines[wl]
 				} else {
-					// Use original text for wrapped lines or when no highlighting
+					// Use original text when no highlighting
 					lineText = string(wrappedLine)
 				}
 				s.WriteString(style.Render(lineText))
@@ -1709,6 +1716,70 @@ func getActiveAnsiFormatting(text string, pos int) string {
 
 	// Reconstruct the active formatting
 	result := fgColor + bgColor + style
+	return result
+}
+
+// wrapHighlightedText wraps highlighted text (with ANSI codes) to match the structure
+// of wrapped runes. It returns a slice of strings, one for each wrapped segment.
+func wrapHighlightedText(highlightedText string, wrappedRunes [][]rune) []string {
+	if len(wrappedRunes) == 0 {
+		return []string{}
+	}
+	if len(wrappedRunes) == 1 {
+		return []string{highlightedText}
+	}
+
+	// Strip ANSI codes to get plain text for matching
+	plainText := stripAnsiEscapes(highlightedText)
+	plainRunes := []rune(plainText)
+
+	result := make([]string, len(wrappedRunes))
+	currentRunePos := 0
+
+	for i, wrappedSegment := range wrappedRunes {
+		segmentLen := len(wrappedSegment)
+		if segmentLen == 0 {
+			result[i] = ""
+			continue
+		}
+
+		// Find the start and end positions in the plain text
+		startPos := currentRunePos
+		endPos := currentRunePos + segmentLen
+		if endPos > len(plainRunes) {
+			endPos = len(plainRunes)
+		}
+
+		// Find the corresponding positions in the highlighted text
+		highlightedStart := findCharPositionInHighlightedText(highlightedText, startPos)
+		highlightedEnd := findCharPositionInHighlightedText(highlightedText, endPos)
+
+		if highlightedStart >= 0 && highlightedEnd >= 0 && highlightedStart < len(highlightedText) {
+			// Get the active formatting at the start
+			activeFormat := getActiveAnsiFormatting(highlightedText, highlightedStart)
+
+			// Extract the segment with ANSI codes
+			segment := highlightedText[highlightedStart:highlightedEnd]
+
+			// Prepend active formatting if we're not at the start
+			if startPos > 0 && activeFormat != "" {
+				segment = activeFormat + segment
+			}
+
+			// Append reset at the end of each segment to prevent color bleeding
+			if i < len(wrappedRunes)-1 {
+				segment += "\x1b[0m"
+			}
+
+			result[i] = segment
+		} else {
+			// Fallback to plain text
+			result[i] = string(wrappedSegment)
+		}
+
+		currentRunePos = endPos
+	}
+
 	return result
 }
 
