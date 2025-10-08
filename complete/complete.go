@@ -234,6 +234,16 @@ func (r *renderer) Update(_ tea.Msg, _ *list.Model) tea.Cmd { return nil }
 // SetWidth changes the width.
 func (m *Model) SetWidth(width int) {
 	m.width = width
+	// Update all list widths to match
+	// Ensure minimum width to avoid rendering issues
+	minWidth := 10
+	listWidth := width
+	if listWidth < minWidth {
+		listWidth = minWidth
+	}
+	for _, l := range m.valueLists {
+		l.SetWidth(listWidth)
+	}
 }
 
 // SetHeight changes the height.
@@ -292,6 +302,10 @@ func (m *Model) SetValues(values Values) {
 		m.categoryNames[i] = category
 		var itemsMaxWidth int
 		m.listItems[i], itemsMaxWidth = convertToItems(values, i)
+		// Ensure minimum width to avoid rendering issues
+		if itemsMaxWidth < 10 {
+			itemsMaxWidth = 10
+		}
 		// Limit to 4 items per page
 		itemsToShow := min(len(m.listItems[i]), 4)
 		m.maxHeight = max(m.maxHeight, itemsToShow*perItemHeight+listDecorationRows)
@@ -448,12 +462,24 @@ func (m *Model) Update(imsg tea.Msg) (tea.Model, tea.Cmd) {
 	// filtering prompt is open but there is no filter entered.
 	// We don't like this - enter should just accept the current item.
 	newModel.KeyMap.AcceptWhileFiltering.SetEnabled(true)
+	// Ensure the list maintains proper dimensions after update
+	if m.width >= 10 {
+		newModel.SetWidth(m.width)
+	}
+	if m.height >= 2 {
+		newModel.SetHeight(m.height - 1)
+	}
 	m.valueLists[m.selectedList] = &newModel
 	return m, cmd
 }
 
 // View implements the tea.Model interface.
 func (m *Model) View() string {
+	// Guard against rendering with invalid dimensions
+	if m.width < 10 || m.height < 2 {
+		return ""
+	}
+
 	contents := make([]string, len(m.valueLists))
 	for i, l := range m.valueLists {
 		// Render title manually to avoid truncation
