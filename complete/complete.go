@@ -7,6 +7,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
+	"github.com/charmbracelet/bubbles/paginator"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	rw "github.com/mattn/go-runewidth"
@@ -252,7 +253,7 @@ func (m *Model) SetHeight(height int) {
 	m.height = clamp(height, 2, m.maxHeight)
 	for _, l := range m.valueLists {
 		l.SetHeight(m.height - 1)
-		// Ensure paginator shows 4 items per page
+		// Ensure paginator shows 5 items per page
 		l.Paginator.PerPage = 4
 		// Force recomputing the keybindings, which
 		// is dependent on the page size.
@@ -306,8 +307,8 @@ func (m *Model) SetValues(values Values) {
 		if itemsMaxWidth < 10 {
 			itemsMaxWidth = 10
 		}
-		// Limit to 4 items per page
-		itemsToShow := min(len(m.listItems[i]), 4)
+		// Limit to 5 items per page
+		itemsToShow := min(len(m.listItems[i]), 5)
 		m.maxHeight = max(m.maxHeight, itemsToShow*perItemHeight+listDecorationRows)
 		r := &renderer{m: m, listIdx: i, width: itemsMaxWidth}
 		l := list.New(m.listItems[i], r, itemsMaxWidth, stdHeight)
@@ -316,8 +317,9 @@ func (m *Model) SetValues(values Values) {
 		l.DisableQuitKeybindings()
 		l.SetShowHelp(false)
 		l.SetShowStatusBar(false)
-		// Set the paginator to show all items (up to 4) per page
+		// Set the paginator to show all items (up to 5) per page
 		l.Paginator.PerPage = 4
+		l.Paginator.Type = paginator.Arabic
 		m.valueLists[i] = &l
 	}
 

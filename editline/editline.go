@@ -1112,6 +1112,7 @@ func (m Model) View() string {
 
 	if m.showCompletions {
 		buf.WriteString(m.completions.View())
+		buf.WriteByte('\n')
 	}
 	buf.WriteString(m.text.View())
 	if m.currentlySearching() {
